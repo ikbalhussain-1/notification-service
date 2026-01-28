@@ -17,7 +17,7 @@ class EmailAdapter {
   }
 
   async send(recipients, template, correlationId) {
-    const emails = recipients.email || [];
+    const emails = recipients.email?.to || [];
 
     if (!emails.length) {
       throw new ChannelAdapterError('email', 'No email recipients specified', false);
