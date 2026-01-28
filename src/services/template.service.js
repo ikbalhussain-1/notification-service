@@ -49,17 +49,22 @@ class TemplateService {
     try {
       // Merge recipients into data for Slack templates to enable user tagging
       const templateData = { ...data };
-      if (channel === 'slack' && recipients.slackUsers) {
-        // Resolve emails to Slack user IDs if Slack adapter is available
-        if (this.slackAdapter) {
+      if (channel === 'slack') {
+        const slackConfig = recipients.slack || {};
+        const usersToTag = slackConfig.usersToTag || [];
+        
+        // Resolve emails to Slack user IDs for tagging if Slack adapter is available
+        if (usersToTag.length > 0 && this.slackAdapter) {
           const resolvedUserIds = await this.slackAdapter.resolveSlackUserIds(
-            recipients.slackUsers,
+            usersToTag,
             correlationId
           );
           templateData.slackUsers = resolvedUserIds;
-        } else {
-          // Fallback: use as-is (assumes user IDs)
-          templateData.slackUsers = recipients.slackUsers;
+        }
+        
+        // Pass channelTags (supports array) from options to template data
+        if (slackConfig.options?.channelTags) {
+          templateData.channelTags = slackConfig.options.channelTags;
         }
       }
       

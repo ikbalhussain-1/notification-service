@@ -76,30 +76,53 @@ class SlackAdapter {
   }
 
   async send(recipients, template, correlationId) {
-    const slackUsers = recipients.slackUsers || [];
-    const channel = recipients.channel || this.defaultChannel;
+    const slackConfig = recipients.slack || {};
+    const channel = slackConfig.channel || this.defaultChannel;
+    const usersToTag = slackConfig.usersToTag || [];  // For tagging in channel
+    const usersToDM = slackConfig.usersToDM || [];  // For sending DMs
+    const options = slackConfig.options || {};
+    const sendDMs = options.sendDMs === true;  // Send DMs to usersToTag if true
+    
+    // Combine usersToDM with usersToTag (if sendDMs is true)
+    const allDMUsers = sendDMs 
+      ? [...new Set([...usersToTag, ...usersToDM])]  // Remove duplicates
+      : usersToDM;
 
-    if (!slackUsers.length && !channel) {
+    // At least one action must be specified
+    if (!channel && usersToTag.length === 0 && allDMUsers.length === 0) {
       throw new ChannelAdapterError('slack', 'No recipients or channel specified', false);
     }
 
     try {
-      // Resolve emails to Slack user IDs
-      const resolvedUserIds = await this.resolveSlackUserIds(slackUsers, correlationId);
-
-      if (resolvedUserIds.length === 0 && slackUsers.length > 0) {
-        logger.warn('[SlackAdapter] No valid Slack user IDs resolved', {
-          correlationId,
-          originalCount: slackUsers.length,
-        });
-      }
-
-      // Send to individual users via DM or channel
       const promises = [];
 
-      if (resolvedUserIds.length > 0) {
-        // Send DMs to users
-        for (const userId of resolvedUserIds) {
+      // Resolve emails to Slack user IDs for tagging
+      let resolvedTagUserIds = [];
+      if (usersToTag.length > 0) {
+        resolvedTagUserIds = await this.resolveSlackUserIds(usersToTag, correlationId);
+        if (resolvedTagUserIds.length === 0 && usersToTag.length > 0) {
+          logger.warn('[SlackAdapter] No valid Slack user IDs resolved for tagging', {
+            correlationId,
+            originalCount: usersToTag.length,
+          });
+        }
+      }
+
+      // Resolve emails to Slack user IDs for DMs
+      let resolvedDMUserIds = [];
+      if (allDMUsers.length > 0) {
+        resolvedDMUserIds = await this.resolveSlackUserIds(allDMUsers, correlationId);
+        if (resolvedDMUserIds.length === 0 && allDMUsers.length > 0) {
+          logger.warn('[SlackAdapter] No valid Slack user IDs resolved for DMs', {
+            correlationId,
+            originalCount: allDMUsers.length,
+          });
+        }
+      }
+
+      // Send DMs to users
+      if (resolvedDMUserIds.length > 0) {
+        for (const userId of resolvedDMUserIds) {
           promises.push(
             this.client.chat.postMessage({
               channel: userId,
@@ -107,10 +130,14 @@ class SlackAdapter {
             })
           );
         }
+        logger.debug('[SlackAdapter] Sending DMs to users', {
+          correlationId,
+          userCount: resolvedDMUserIds.length,
+        });
       }
 
+      // Send to channel (if channel is specified)
       if (channel) {
-        // Send to channel (template already has resolved user IDs from template service)
         promises.push(
           this.client.chat.postMessage({
             channel,
@@ -122,8 +149,9 @@ class SlackAdapter {
       await Promise.all(promises);
       logger.info('[SlackAdapter] Message sent successfully', {
         correlationId,
-        recipients: resolvedUserIds.length,
         channel,
+        taggedUsers: resolvedTagUserIds.length,
+        dmUsers: resolvedDMUserIds.length,
       });
     } catch (error) {
       const isTransient = error.code === 'slack_webapi_rate_limited' || 

@@ -42,25 +42,70 @@ const { validateNotificationRequest, handleValidationErrors } = require('../midd
  *                 example: [email, slack]
  *               recipients:
  *                 type: object
+ *                 required: true
  *                 properties:
  *                   email:
- *                     type: array
- *                     items:
- *                       type: string
- *                     example: [user@example.com]
- *                   slackUsers:
- *                     type: array
- *                     items:
- *                       type: string
- *                     example: [U12345]
- *                   webengageUsers:
- *                     type: array
- *                     items:
- *                       type: string
- *                   internalEventTargets:
- *                     type: array
- *                     items:
- *                       type: string
+ *                     type: object
+ *                     properties:
+ *                       to:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         required: true
+ *                         example: [user@example.com]
+ *                   slack:
+ *                     type: object
+ *                     properties:
+ *                       usersToTag:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         description: Array of email addresses to tag in channel messages
+ *                         example: [user1@example.com, user2@example.com]
+ *                       usersToDM:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         description: Array of email addresses to send direct messages to
+ *                         example: [user3@example.com]
+ *                       channel:
+ *                         type: string
+ *                         description: Slack channel ID or name (e.g., #general or C1234567890)
+ *                         example: "#general"
+ *                       options:
+ *                         type: object
+ *                         properties:
+ *                           sendDMs:
+ *                             type: boolean
+ *                             default: false
+ *                             description: Whether to send direct messages to usersToTag users
+ *                           channelTags:
+ *                             oneOf:
+ *                               - type: string
+ *                               - type: array
+ *                                 items:
+ *                                   type: string
+ *                             enum: [channel, here, everyone]
+ *                             description: Channel-wide mention tag(s). Can be single tag or array of tags
+ *                             example: ["channel", "here"]
+ *                   webengage:
+ *                     type: object
+ *                     properties:
+ *                       users:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       options:
+ *                         type: object
+ *                   internal:
+ *                     type: object
+ *                     properties:
+ *                       targets:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       options:
+ *                         type: object
  *               templateId:
  *                 type: string
  *                 example: lab_report_ready_v1

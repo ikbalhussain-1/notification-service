@@ -1,18 +1,26 @@
 // Slack templates for lab reports
 
 /**
- * Get channel tag string for Slack mentions
- * @param {string} channelTag - 'channel', 'here', or 'everyone'
- * @returns {string} Slack channel tag string or empty string
+ * Get channel tag strings for Slack mentions
+ * @param {string|string[]} channelTags - Single tag or array of tags ('channel', 'here', 'everyone')
+ * @returns {string} Formatted channel tags string or empty string
  */
-const getChannelTag = (channelTag) => {
-  if (!channelTag) return '';
+const getChannelTags = (channelTags) => {
+  if (!channelTags) return '';
+  
   const tagMap = {
     channel: '<!channel>',
     here: '<!here>',
     everyone: '<!everyone>',
   };
-  return tagMap[channelTag.toLowerCase()] || '';
+  
+  // Handle both single string and array
+  const tags = Array.isArray(channelTags) ? channelTags : [channelTags];
+  
+  return tags
+    .map(tag => tagMap[tag.toLowerCase()])
+    .filter(Boolean)
+    .join(' ');
 };
 
 /**
@@ -29,9 +37,9 @@ const formatUserMentions = (slackUsers) => {
 
 module.exports = {
   lab_report_ready_v1: (data) => {
-    const channelTag = getChannelTag(data.channelTag);
+    const channelTags = getChannelTags(data.channelTags);
     const userMentions = formatUserMentions(data.slackUsers);
-    const mentionsText = [channelTag, userMentions].filter(Boolean).join(' ');
+    const mentionsText = [channelTags, userMentions].filter(Boolean).join(' ');
     const textPrefix = mentionsText ? `${mentionsText} ` : '';
     
     return {
@@ -78,9 +86,9 @@ module.exports = {
   },
 
   lab_report_ready_v2: (data) => {
-    const channelTag = getChannelTag(data.channelTag);
+    const channelTags = getChannelTags(data.channelTags);
     const userMentions = formatUserMentions(data.slackUsers);
-    const mentionsText = [channelTag, userMentions].filter(Boolean).join(' ');
+    const mentionsText = [channelTags, userMentions].filter(Boolean).join(' ');
     const textPrefix = mentionsText ? `${mentionsText} ` : '';
     
     return {
@@ -127,9 +135,9 @@ module.exports = {
   },
 
   lab_report_pending_v1: (data) => {
-    const channelTag = getChannelTag(data.channelTag);
+    const channelTags = getChannelTags(data.channelTags);
     const userMentions = formatUserMentions(data.slackUsers);
-    const mentionsText = [channelTag, userMentions].filter(Boolean).join(' ');
+    const mentionsText = [channelTags, userMentions].filter(Boolean).join(' ');
     const textPrefix = mentionsText ? `${mentionsText} ` : '';
     
     return {
@@ -176,9 +184,9 @@ module.exports = {
   },
 
   lab_report_qr_missing_v1: (data) => {
-    const channelTag = getChannelTag(data.channelTag);
+    const channelTags = getChannelTags(data.channelTags);
     const userMentions = formatUserMentions(data.slackUsers);
-    const mentionsText = [channelTag, userMentions].filter(Boolean).join(' ');
+    const mentionsText = [channelTags, userMentions].filter(Boolean).join(' ');
     const textPrefix = mentionsText ? `${mentionsText} ` : '';
     
     return {
@@ -234,9 +242,9 @@ module.exports = {
   },
 
   unknown_sku_detected_v1: (data) => {
-    const channelTag = getChannelTag(data.channelTag);
+    const channelTags = getChannelTags(data.channelTags);
     const userMentions = formatUserMentions(data.slackUsers);
-    const mentionsText = [channelTag, userMentions].filter(Boolean).join(' ');
+    const mentionsText = [channelTags, userMentions].filter(Boolean).join(' ');
     const textPrefix = mentionsText ? `${mentionsText} ` : '';
     
     return {
