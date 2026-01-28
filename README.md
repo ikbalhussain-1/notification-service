@@ -54,6 +54,3 @@ Swagger UI available at: `http://localhost:3005/api-docs`
 - `GET /health` - Health check
 - `GET /ready` - Readiness check
 
-## Architecture
-
-See [IMPLEMENTATION_CHOICES.md](./IMPLEMENTATION_CHOICES.md) for detailed architecture and design decisions.
