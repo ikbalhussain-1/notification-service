@@ -48,10 +48,6 @@ npm start
 
 Swagger UI available at: `http://localhost:3005/api-docs`
 
-Default credentials:
-- Username: `admin`
-- Password: `admin123`
-
 ## API Endpoints
 
 - `POST /notifications/send` - Send notification
