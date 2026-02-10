@@ -12,13 +12,13 @@ const envConfig = {
 
   // Kafka Configuration
   kafka: {
-    bootstrapServers: (process.env.KAFKA_BOOTSTRAP_SERVERS).trim(),
+    bootstrapServers: (process.env.KAFKA_BOOTSTRAP_SERVERS || 'localhost:9092').trim(),
     clientId: (process.env.KAFKA_CLIENT_ID || 'notification-service').trim(),
     consumerGroupId: (process.env.KAFKA_CONSUMER_GROUP_ID || 'notification-service-group').trim(),
     sasl: {
-      mechanism: process.env.KAFKA_SASL_MECHANISM || 'plain',
-      username: process.env.KAFKA_SASL_USERNAME || '',
-      password: process.env.KAFKA_SASL_PASSWORD || '',
+      mechanism: (process.env.KAFKA_SASL_MECHANISM || 'plain').trim(),
+      username: (process.env.KAFKA_SASL_USERNAME || '').trim(),
+      password: (process.env.KAFKA_SASL_PASSWORD || '').trim(),
     },
     ssl: process.env.KAFKA_SSL_ENABLED === 'true',
     connectionTimeout: parseInt(process.env.KAFKA_CONNECTION_TIMEOUT || '10000', 10),

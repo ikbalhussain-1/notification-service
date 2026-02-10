@@ -15,16 +15,26 @@ class KafkaConsumer {
     if (this.isConnected) return;
 
     try {
+      // Parse bootstrap servers (KafkaJS expects array, config provides comma-separated string)
+      const brokers = envConfig.kafka.bootstrapServers
+        .split(',')
+        .map(broker => broker.trim())
+        .filter(broker => broker.length > 0);
+
+      if (brokers.length === 0) {
+        throw new Error('KAFKA_BOOTSTRAP_SERVERS is empty');
+      }
+
       const kafkaConfig = {
         clientId: envConfig.kafka.clientId,
-        brokers: envConfig.kafka.bootstrapServers.split(','),
+        brokers,
         connectionTimeout: envConfig.kafka.connectionTimeout,
         requestTimeout: envConfig.kafka.requestTimeout,
         logLevel: envConfig.nodeEnv === 'production' ? logLevel.WARN : logLevel.INFO,
       };
 
-      // Add SASL if configured
-      if (envConfig.kafka.sasl.username) {
+      // Add SASL if both username and password are provided
+      if (envConfig.kafka.sasl.username && envConfig.kafka.sasl.password) {
         kafkaConfig.sasl = {
           mechanism: envConfig.kafka.sasl.mechanism,
           username: envConfig.kafka.sasl.username,
