@@ -7,12 +7,16 @@ const envConfig = {
 
   // Redis Configuration
   redis: {
-    uri: process.env.REDIS_URI || 'redis://localhost:6379',
+    uri: process.env.REDIS_URI
+      ? process.env.REDIS_URI.trim()
+      : (process.env.NODE_ENV === 'production' ? null : 'redis://localhost:6379'),
   },
 
   // Kafka Configuration
   kafka: {
-    bootstrapServers: (process.env.KAFKA_BOOTSTRAP_SERVERS || 'localhost:9092').trim(),
+    bootstrapServers: process.env.KAFKA_BOOTSTRAP_SERVERS
+      ? process.env.KAFKA_BOOTSTRAP_SERVERS.trim()
+      : (process.env.NODE_ENV === 'production' ? null : 'localhost:9092'),
     clientId: (process.env.KAFKA_CLIENT_ID || 'notification-service').trim(),
     consumerGroupId: (process.env.KAFKA_CONSUMER_GROUP_ID || 'notification-service-group').trim(),
     sasl: {
@@ -73,5 +77,25 @@ const envConfig = {
     apiKey: process.env.WEBENGAGE_API_KEY || '',
   },
 };
+
+// Validate required production environment variables
+if (envConfig.nodeEnv === 'production') {
+  const requiredVars = [];
+  
+  if (!envConfig.kafka.bootstrapServers) {
+    requiredVars.push('KAFKA_BOOTSTRAP_SERVERS');
+  }
+  
+  if (!envConfig.redis.uri) {
+    requiredVars.push('REDIS_URI');
+  }
+  
+  if (requiredVars.length > 0) {
+    throw new Error(
+      `Missing required environment variables for production: ${requiredVars.join(', ')}. ` +
+      'These must be set in production environment.'
+    );
+  }
+}
 
 module.exports = envConfig;
