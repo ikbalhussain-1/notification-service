@@ -35,7 +35,7 @@ class NotificationConsumer {
 
   async processMessage(message) {
     const { value, headers } = message;
-    const correlationId = headers['correlation-id'] || value.correlationId || 'unknown';
+    const correlationId = headers['x-correlation-id'] || value.correlationId || 'unknown';
 
     try {
       logger.info('[NotificationConsumer] Processing message', {

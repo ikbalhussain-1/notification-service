@@ -10,18 +10,20 @@ function generateCorrelationId() {
 
 /**
  * Extract correlation ID from request headers
+ * 
+ * Standard: This service uses the 'x-correlation-id' header for request tracing.
+ * If not provided, a new UUID is generated.
+ * 
+ * @param {Object} req - Express request object
+ * @returns {string} Correlation ID (UUID v4)
  */
 function extractCorrelationId(req) {
   if (!req || !req.headers) {
     return generateCorrelationId();
   }
   
-  return (
-    req.headers['x-correlation-id'] ||
-    req.headers['x-request-id'] ||
-    req.headers['correlation-id'] ||
-    generateCorrelationId()
-  );
+  // Standard header: x-correlation-id
+  return req.headers['x-correlation-id'] || generateCorrelationId();
 }
 
 /**

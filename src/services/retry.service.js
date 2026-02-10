@@ -40,7 +40,7 @@ class RetryService {
       retryMessage,
       {
         'retry-count': String(retryCount + 1),
-        'correlation-id': originalMessage.correlationId || '',
+        'x-correlation-id': originalMessage.correlationId || '',
       }
     );
 

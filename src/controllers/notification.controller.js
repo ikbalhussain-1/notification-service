@@ -46,7 +46,7 @@ class NotificationController {
         payload,
         {
           'event-type': payload.eventType,
-          'correlation-id': correlationId,
+          'x-correlation-id': correlationId,
         }
       );
 

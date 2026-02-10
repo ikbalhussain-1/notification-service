@@ -29,7 +29,7 @@ class DLQService {
       dlqMessage,
       {
         'error-type': error.name || 'UnknownError',
-        'correlation-id': originalMessage.correlationId || '',
+        'x-correlation-id': originalMessage.correlationId || '',
       }
     );
 

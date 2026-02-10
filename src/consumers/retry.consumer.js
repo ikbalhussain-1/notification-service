@@ -34,7 +34,7 @@ class RetryConsumer {
 
   async processMessage(message) {
     const { value, headers } = message;
-    const correlationId = headers['correlation-id'] || value.correlationId || 'unknown';
+    const correlationId = headers['x-correlation-id'] || value.correlationId || 'unknown';
     const retryMetadata = value.retryMetadata || {};
 
     // Check if it's time to retry
