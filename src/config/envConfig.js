@@ -12,9 +12,9 @@ const envConfig = {
 
   // Kafka Configuration
   kafka: {
-    bootstrapServers: process.env.KAFKA_BOOTSTRAP_SERVERS || 'localhost:9092',
-    clientId: process.env.KAFKA_CLIENT_ID || 'notification-service',
-    consumerGroupId: process.env.KAFKA_CONSUMER_GROUP_ID || 'notification-service-group',
+    bootstrapServers: (process.env.KAFKA_BOOTSTRAP_SERVERS).trim(),
+    clientId: (process.env.KAFKA_CLIENT_ID || 'notification-service').trim(),
+    consumerGroupId: (process.env.KAFKA_CONSUMER_GROUP_ID || 'notification-service-group').trim(),
     sasl: {
       mechanism: process.env.KAFKA_SASL_MECHANISM || 'plain',
       username: process.env.KAFKA_SASL_USERNAME || '',
