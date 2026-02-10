@@ -19,11 +19,6 @@ class RedisAdapter {
         this.isConnected = false;
       });
 
-      this.client.on('connect', () => {
-        logger.info('[RedisAdapter] Redis connected');
-        this.isConnected = true;
-      });
-
       this.client.on('disconnect', () => {
         logger.warn('[RedisAdapter] Redis disconnected');
         this.isConnected = false;
@@ -31,7 +26,7 @@ class RedisAdapter {
 
       await this.client.connect();
       this.isConnected = true;
-      logger.info('[RedisAdapter] Redis connection established');
+      logger.info('[RedisAdapter] Redis connected');
     } catch (error) {
       logger.error('[RedisAdapter] Failed to connect to Redis', { error: error.message });
       throw error;

@@ -41,8 +41,8 @@ function log(level, message, context = {}) {
       console.log(JSON.stringify(logEntry));
     }
   } else {
-    // In development, log everything
-    console.log(JSON.stringify(logEntry));
+    // In development, log everything with pretty-print formatting
+    console.log(JSON.stringify(logEntry, null, 2));
   }
 }
 
