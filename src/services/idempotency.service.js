@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const RedisAdapter = require('../adapters/redis.adapter');
 const { logger } = require('../utils/logger');
+const envConfig = require('../config/envConfig');
 
 class IdempotencyService {
   constructor(redisAdapter) {
@@ -10,11 +11,12 @@ class IdempotencyService {
 
   /**
    * Generate idempotency key from request payload
+   * Includes environment prefix to avoid conflicts between dev/staging/prod
    */
   generateKey(payload) {
     const sortedPayload = JSON.stringify(payload, Object.keys(payload).sort());
     const hash = crypto.createHash('sha256').update(sortedPayload).digest('hex');
-    return `idempotency:${hash}`;
+    return `${envConfig.envPrefix}:idempotency:${hash}`;
   }
 
   /**
