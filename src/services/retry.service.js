@@ -1,5 +1,4 @@
 const envConfig = require('../config/envConfig');
-const KafkaProducer = require('../adapters/kafka/producer');
 const { logger } = require('../utils/logger');
 
 class RetryService {

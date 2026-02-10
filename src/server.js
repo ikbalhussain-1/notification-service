@@ -41,7 +41,7 @@ const notificationController = new NotificationController(idempotencyService, ka
 const healthController = new HealthController(redisAdapter, kafkaProducer);
 
 // Initialize consumers
-const notificationConsumer = new NotificationConsumer(retryService, dlqService);
+const notificationConsumer = new NotificationConsumer(retryService, dlqService, redisAdapter);
 const retryConsumer = new RetryConsumer(retryService, dlqService);
 const dlqConsumer = new DLQConsumer();
 

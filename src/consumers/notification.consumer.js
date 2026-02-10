@@ -1,5 +1,4 @@
 const KafkaConsumer = require('../adapters/kafka/consumer');
-const RedisAdapter = require('../adapters/redis.adapter');
 const SlackAdapter = require('../adapters/channels/slack.adapter');
 const EmailAdapter = require('../adapters/channels/email.adapter');
 const InternalEventsAdapter = require('../adapters/channels/internal-events.adapter');
@@ -12,9 +11,9 @@ const { logger } = require('../utils/logger');
 const { ChannelAdapterError } = require('../utils/errors');
 
 class NotificationConsumer {
-  constructor(retryService, dlqService) {
+  constructor(retryService, dlqService, redisAdapter) {
     this.consumer = new KafkaConsumer();
-    this.redis = new RedisAdapter();
+    this.redis = redisAdapter;
     this.templateService = new TemplateService();
     this.retryService = retryService;
     this.dlqService = dlqService;
@@ -30,7 +29,6 @@ class NotificationConsumer {
 
 
   async initialize() {
-    await this.redis.connect();
     await this.consumer.connect();
     await this.consumer.subscribe([envConfig.kafka.topics.events]);
   }
@@ -125,7 +123,6 @@ class NotificationConsumer {
 
   async stop() {
     await this.consumer.disconnect();
-    await this.redis.disconnect();
   }
 }
 
