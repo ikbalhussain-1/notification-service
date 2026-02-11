@@ -76,8 +76,24 @@ class TemplateService {
         channel,
         templateId,
         error: error.message,
+        stack: error.stack, // Preserve stack trace
       });
-      throw new TemplateNotFoundError(templateId, channel);
+      
+      // If it's already a TemplateNotFoundError, re-throw it
+      if (error instanceof TemplateNotFoundError) {
+        throw error;
+      }
+      
+      // Create a more descriptive error preserving original context
+      const templateError = new Error(
+        `Template rendering failed for ${templateId} in channel ${channel}: ${error.message}`
+      );
+      templateError.name = 'TemplateRenderingError';
+      templateError.originalError = error;
+      templateError.templateId = templateId;
+      templateError.channel = channel;
+      templateError.stack = error.stack;
+      throw templateError;
     }
   }
 

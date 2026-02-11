@@ -23,11 +23,12 @@ class NotificationController {
     };
 
     try {
-      // Check idempotency
+      // Atomic check-and-set for idempotency (prevents race condition)
+      // Note: If Redis is unavailable, this will fail open and allow the request
       const idempotencyKey = this.idempotencyService.generateKey(payload);
-      const isDuplicate = await this.idempotencyService.isDuplicate(idempotencyKey);
+      const isNew = await this.idempotencyService.markProcessed(idempotencyKey);
 
-      if (isDuplicate) {
+      if (!isNew) {
         logger.info('[NotificationController] Duplicate request detected', { correlationId });
         return res.status(202).json({
           success: true,
@@ -35,9 +36,6 @@ class NotificationController {
           correlationId,
         });
       }
-
-      // Mark as processed
-      await this.idempotencyService.markProcessed(idempotencyKey);
 
       // Publish to Kafka
       await this.kafkaProducer.publish(
@@ -66,6 +64,29 @@ class NotificationController {
         correlationId,
         error: error.message,
       });
+
+      // Check if it's a Kafka connection error
+      const isKafkaError = error.message.includes('ECONNREFUSED') || 
+                          error.message.includes('Connection') ||
+                          error.message.includes('Kafka') ||
+                          !this.kafkaProducer.getConnectionStatus();
+
+      if (isKafkaError) {
+        logger.error('[NotificationController] Kafka unavailable', {
+          correlationId,
+          error: error.message,
+        });
+        
+        return res.status(503).json({
+          success: false,
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'Notification service temporarily unavailable. Please retry.',
+          },
+          correlationId,
+          retryAfter: 30, // seconds
+        });
+      }
 
       res.status(500).json({
         success: false,

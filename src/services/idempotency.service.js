@@ -21,6 +21,7 @@ class IdempotencyService {
 
   /**
    * Check if request is duplicate
+   * @deprecated Use markProcessed() which provides atomic check-and-set
    */
   async isDuplicate(key) {
     try {
@@ -34,14 +35,23 @@ class IdempotencyService {
   }
 
   /**
-   * Mark request as processed
+   * Atomically mark request as processed (SETNX)
+   * Returns true if key was set (new request), false if key already exists (duplicate)
+   * 
+   * Fails open when Redis is unavailable - allows request to proceed but logs warning
    */
   async markProcessed(key) {
     try {
-      await this.redis.set(key, 'processed', this.ttlSeconds);
+      const result = await this.redis.setNX(key, 'processed', this.ttlSeconds);
+      return result;
     } catch (error) {
-      logger.error('[IdempotencyService] Error marking request as processed', { error: error.message });
-      // Non-blocking - log but don't throw
+      logger.warn('[IdempotencyService] Redis unavailable, allowing request (idempotency disabled)', {
+        error: error.message,
+        key,
+      });
+      // Fail open - allow request to proceed when Redis is unavailable
+      // This prevents service outage but may allow duplicate requests
+      return true; // Treat as new request
     }
   }
 }

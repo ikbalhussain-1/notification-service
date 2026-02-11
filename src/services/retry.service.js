@@ -28,7 +28,7 @@ class RetryService {
       retryMetadata: {
         retryCount: retryCount + 1,
         nextRetryAt: this.getNextRetryAt(retryCount),
-        lastError: lastError.message || String(lastError),
+        lastError: lastError ? (lastError.message || String(lastError)) : (originalMessage.retryMetadata?.lastError || ''),
         lastRetryAt: new Date().toISOString(),
       },
     };
@@ -47,6 +47,31 @@ class RetryService {
     logger.info('[RetryService] Published to retry topic', {
       correlationId: originalMessage.correlationId,
       retryCount: retryCount + 1,
+    });
+  }
+
+  /**
+   * Re-publish message with existing retry metadata (for offset commit)
+   */
+  async republishWithSameMetadata(originalMessage) {
+    const retryMessage = {
+      ...originalMessage,
+      // Preserve existing retryMetadata
+    };
+
+    const key = originalMessage.correlationId || originalMessage.eventId || 'retry';
+    await this.producer.publish(
+      envConfig.kafka.topics.retry,
+      key,
+      retryMessage,
+      {
+        'retry-count': String(originalMessage.retryMetadata?.retryCount || 0),
+        'x-correlation-id': originalMessage.correlationId || '',
+      }
+    );
+
+    logger.debug('[RetryService] Re-published message with same metadata', {
+      correlationId: originalMessage.correlationId,
     });
   }
 

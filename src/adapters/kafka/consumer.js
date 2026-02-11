@@ -183,12 +183,18 @@ class KafkaConsumer {
             headers,
           });
         } catch (error) {
+          // Log the error with full context
           logger.error('[KafkaConsumer] Error processing message', {
             topic,
             partition,
             offset: message.offset,
             error: error.message,
+            stack: error.stack,
           });
+          
+          // Re-throw to prevent offset commit on error
+          // KafkaJS will handle retry based on consumer config
+          throw error;
         }
       },
     });

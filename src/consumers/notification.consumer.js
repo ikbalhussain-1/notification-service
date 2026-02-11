@@ -6,6 +6,7 @@ const WebEngageAdapter = require('../adapters/channels/webengage.adapter');
 const TemplateService = require('../services/template.service');
 const RetryService = require('../services/retry.service');
 const DLQService = require('../services/dlq.service');
+const MessageValidator = require('../utils/message-validator');
 const envConfig = require('../config/envConfig');
 const { logger } = require('../utils/logger');
 const { ChannelAdapterError } = require('../utils/errors');
@@ -38,18 +39,78 @@ class NotificationConsumer {
     const correlationId = headers['x-correlation-id'] || value.correlationId || 'unknown';
 
     try {
+      // Validate message structure
+      try {
+        MessageValidator.validateNotificationMessage(value);
+      } catch (validationError) {
+        logger.error('[NotificationConsumer] Invalid message format', {
+          correlationId,
+          error: validationError.message,
+          value: JSON.stringify(value),
+        });
+        // Send to DLQ for invalid messages
+        await this.dlqService.publishToDLQ(
+          value,
+          validationError
+        );
+        throw validationError;
+      }
+
       logger.info('[NotificationConsumer] Processing message', {
         correlationId,
         eventType: value.eventType,
         channels: value.channels,
       });
 
-      // Process each channel
+      const channelResults = [];
+      const failedChannels = [];
+
+      // Process each channel independently
       for (const channel of value.channels) {
-        await this.processChannel(correlationId, channel, value);
+        try {
+          await this.processChannel(correlationId, channel, value);
+          channelResults.push({ channel, status: 'success' });
+          logger.info('[NotificationConsumer] Channel processed successfully', {
+            correlationId,
+            channel,
+          });
+        } catch (error) {
+          channelResults.push({ channel, status: 'failed', error: error.message });
+          failedChannels.push({ channel, error });
+          logger.error('[NotificationConsumer] Channel failed', {
+            correlationId,
+            channel,
+            error: error.message,
+          });
+        }
       }
 
-      logger.info('[NotificationConsumer] Message processed successfully', { correlationId });
+      // Handle failed channels
+      if (failedChannels.length > 0) {
+        for (const { channel, error } of failedChannels) {
+          const isTransient = error instanceof ChannelAdapterError && error.isTransient;
+          
+          if (isTransient) {
+            // Retry only the failed channel
+            await this.retryService.publishToRetry(
+              { ...value, channels: [channel] }, // Only retry failed channel
+              0,
+              error
+            );
+          } else {
+            // Permanent failure - send to DLQ
+            await this.dlqService.publishToDLQ(
+              { ...value, channels: [channel] },
+              error
+            );
+          }
+        }
+      }
+
+      logger.info('[NotificationConsumer] Message processed', {
+        correlationId,
+        results: channelResults,
+      });
     } catch (error) {
       logger.error('[NotificationConsumer] Error processing message', {
         correlationId,
@@ -60,57 +121,32 @@ class NotificationConsumer {
   }
 
   async processChannel(correlationId, channel, notificationData) {
-    try {
-      const adapter = this.channelAdapters[channel];
-      if (!adapter) {
-        throw new Error(`Unknown channel: ${channel}`);
-      }
+    const adapter = this.channelAdapters[channel];
+    if (!adapter) {
+      throw new Error(`Unknown channel: ${channel}`);
+    }
 
-      // Get template if needed (internal events don't use templates)
-      let template = null;
-      if (channel !== 'internal') {
-        // Set Slack adapter in template service for email resolution
-        if (channel === 'slack' && this.channelAdapters.slack) {
-          this.templateService.setSlackAdapter(this.channelAdapters.slack);
-        }
-        template = await this.templateService.getTemplate(
-          channel,
-          notificationData.templateId,
-          notificationData.data,
-          notificationData.recipients,
-          correlationId
-        );
+    // Get template if needed (internal events don't use templates)
+    let template = null;
+    if (channel !== 'internal') {
+      // Set Slack adapter in template service for email resolution
+      if (channel === 'slack' && this.channelAdapters.slack) {
+        this.templateService.setSlackAdapter(this.channelAdapters.slack);
       }
-
-      // Send notification
-      if (channel === 'internal') {
-        await adapter.send(notificationData.recipients, notificationData.data, correlationId);
-      } else {
-        await adapter.send(notificationData.recipients, template, correlationId);
-      }
-
-      logger.info('[NotificationConsumer] Channel processed successfully', {
-        correlationId,
+      template = await this.templateService.getTemplate(
         channel,
-      });
-    } catch (error) {
-      const isTransient = error instanceof ChannelAdapterError && error.isTransient;
+        notificationData.templateId,
+        notificationData.data,
+        notificationData.recipients,
+        correlationId
+      );
+    }
 
-      if (isTransient) {
-        // Retry
-        await this.retryService.publishToRetry(
-          { ...notificationData, channel },
-          0,
-          error
-        );
-      } else {
-        // Permanent failure - send to DLQ
-        await this.dlqService.publishToDLQ(
-          { ...notificationData, channel },
-          error
-        );
-      }
-      throw error;
+    // Send notification
+    if (channel === 'internal') {
+      await adapter.send(notificationData.recipients, notificationData.data, correlationId);
+    } else {
+      await adapter.send(notificationData.recipients, template, correlationId);
     }
   }
 

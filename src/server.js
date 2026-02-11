@@ -139,11 +139,19 @@ process.on('SIGINT', shutdown);
 // Start server
 async function start() {
   try {
-    // Connect to Redis
-    await redisAdapter.connect();
-    logger.info('[Server] Redis connected');
+    // Try to connect to Redis, but don't fail if unavailable
+    // Service can operate without Redis (idempotency will be disabled)
+    try {
+      await redisAdapter.connect();
+      logger.info('[Server] Redis connected');
+    } catch (error) {
+      logger.warn('[Server] Redis unavailable, continuing without idempotency', {
+        error: error.message,
+      });
+      logger.warn('[Server] Service will operate in degraded mode - duplicate requests may be processed');
+    }
 
-    // Connect to Kafka
+    // Connect to Kafka (required - service cannot operate without Kafka)
     await kafkaProducer.connect();
     logger.info('[Server] Kafka producer connected');
 
